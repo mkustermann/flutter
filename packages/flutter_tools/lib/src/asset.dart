@@ -139,16 +139,19 @@ class _ManifestAssetBundleFactory implements AssetBundleFactory {
     required Logger logger,
     required FileSystem fileSystem,
     required Platform platform,
+    required DartBuildAssetProvider? dartBuildAssetProvider,
     bool splitDeferredAssets = false,
   }) : _logger = logger,
        _fileSystem = fileSystem,
        _platform = platform,
-       _splitDeferredAssets = splitDeferredAssets;
+       _splitDeferredAssets = splitDeferredAssets,
+       _dartBuildAssetProvider = dartBuildAssetProvider;
 
   final Logger _logger;
   final FileSystem _fileSystem;
   final Platform _platform;
   final bool _splitDeferredAssets;
+  final DartBuildAssetProvider? _dartBuildAssetProvider;
 
   @override
   AssetBundle createBundle() => ManifestAssetBundle(
@@ -170,12 +173,14 @@ class ManifestAssetBundle implements AssetBundle {
     required Platform platform,
     required String flutterRoot,
     bool splitDeferredAssets = false,
+    required DartBuildAssetProvider? dartBuildAssetProvider,
   }) : _logger = logger,
        _fileSystem = fileSystem,
        _platform = platform,
        _flutterRoot = flutterRoot,
        _splitDeferredAssets = splitDeferredAssets,
-       _licenseCollector = LicenseCollector(fileSystem: fileSystem);
+       _licenseCollector = LicenseCollector(fileSystem: fileSystem),
+       _dartBuildAssetProvider = dartBuildAssetProvider;
 
   final Logger _logger;
   final FileSystem _fileSystem;
@@ -183,6 +188,7 @@ class ManifestAssetBundle implements AssetBundle {
   final Platform _platform;
   final String _flutterRoot;
   final bool _splitDeferredAssets;
+  final DartBuildAssetProvider? _dartBuildAssetProvider;
 
   @override
   final Map<String, AssetBundleEntry> entries = <String, AssetBundleEntry>{};
@@ -224,16 +230,8 @@ class ManifestAssetBundle implements AssetBundle {
     if (!wasBuiltOnce()) {
       return true;
     }
-    if (_lastDartBuildResult == null) {
-      return true;
-    }
-    if (!_lastDartBuildResult!.isBuildUpToDate(_fileSystem)) {
-      // We need to re-run the dart build.
-      return true;
-    }
-    if (_lastDartBuildResult!.isBuildOutputDirty(_fileSystem)) {
-      // We don't have to re-run the dart build, but some files the dart build
-      // wants us to bundle have changed contents.
+    if (_dartBuildAssetProvider != null &&
+      _dartBuildAssetProvider.needsBuild()) {
       return true;
     }
     final DateTime lastBuildTimestamp = _lastBuildTimestamp!;
@@ -283,7 +281,6 @@ class ManifestAssetBundle implements AssetBundle {
     // hang on hot reload, as the incremental dill files will never be copied to the
     // device.
     _lastBuildTimestamp = DateTime.now();
-    _lastDartBuildResult = dartBuildResult;
     if (flutterManifest.isEmpty) {
       entries[_kAssetManifestJsonFilename] = AssetBundleEntry(
         DevFSStringContent('{}'),
@@ -1430,4 +1427,20 @@ class _AssetDirectoryCache {
         .map((File file) => file.path),
     ];
   }
+}
+
+abstract class DartBuildAssetProvider {
+  // if (_lastDartBuildResult == null) {
+  //   return true;
+  // }
+  // if (!_lastDartBuildResult!.isBuildUpToDate(_fileSystem)) {
+  //   // We need to re-run the dart build.
+  //   return true;
+  // }
+  // if (_lastDartBuildResult!.isBuildOutputDirty(_fileSystem)) {
+  //   // We don't have to re-run the dart build, but some files the dart build
+  //   // wants us to bundle have changed contents.
+  //   return true;
+  // }
+  bool needsBuild();
 }

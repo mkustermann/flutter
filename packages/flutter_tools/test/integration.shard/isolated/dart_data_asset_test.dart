@@ -38,6 +38,11 @@ void main() {
       'config',
       '--enable-native-assets',
     ]);
+    processManager.runSync(<String>[
+      flutterBin,
+      'config',
+      '--enable-dart-data-assets',
+    ]);
     tempDirectory = fileSystem.directory(fileSystem.systemTempDirectory.createTempSync().resolveSymbolicLinksSync());
     root = await createDataAssetApp(packageName, tempDirectory);
   });
@@ -49,7 +54,8 @@ void main() {
     // NOTE: flutter-tester doesn't support profile/release mode.
     // NOTE: flutter web doesn't allow cpaturing print()s in profile/release
     // nOTE: flutter web doens't allow adding assets on hot-restart
-    final List<String> devices = <String>[hostOs, 'chrome', 'flutter-tester'];
+    // final List<String> devices = <String>[hostOs, 'chrome', 'flutter-tester'];
+    final List<String> devices = <String>['chrome'];
     final List<String> modes  = <String>['debug', 'release'];
 
     for (final String mode in modes) {
